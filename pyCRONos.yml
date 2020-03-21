@@ -1,0 +1,6 @@
+# !!! UTC TIME IS USED FOR CRON !!!
+telegram:
+  subscribers:
+    888888889:
+      message: "don't forget ur pills"
+      cron: '29 0 * * *'  # At 00:29 every day
