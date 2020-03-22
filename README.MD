@@ -21,4 +21,5 @@ save them into ```secrets/api_hash``` and ```secrets/api_id```
     ```
 
 1. Message will send repeatedly to user according to ```pyCRONos.yml```
+
     ![screenshot](doc/screenshot.jpg)
