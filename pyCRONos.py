@@ -1,7 +1,5 @@
 import os
 from telethon.sync import TelegramClient
-import argparse
-from pprint import pprint
 import logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 import yaml
@@ -51,7 +49,6 @@ def cron_to_apsched(cron):
 
 if __name__ == '__main__':
     with get_tg_client() as client, open(config_file) as conf, open(pid_file, 'w') as pidfile:
-        dialogs = client.get_dialogs()
         logger.info('Read pyCRONos.yml')
         config = yaml.safe_load(conf.read())
 
