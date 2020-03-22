@@ -15,11 +15,6 @@ config_file = os.path.join(HOME, 'pyCRONos.yml')
 pid_file = os.path.join(HOME, 'pyCRONos.pid')
 log_file = os.path.join(HOME, 'pyCRONos.log')
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--list", help='list dialogs and ids', action="store_true")
-parser.add_argument("--keepwatch", help='read pyCRONos.yml and start', action="store_true")
-args = parser.parse_args()
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -55,35 +50,28 @@ def cron_to_apsched(cron):
 
 
 if __name__ == '__main__':
-    with get_tg_client() as client:
-        if args.list:
-            logger.info('Get list of contacts')
-            pprint([(d.name, d.id) for d in client.get_dialogs()])
-        elif args.keepwatch:
-            dialogs = client.get_dialogs()
-            logger.info('Read pyCRONos.yml')
-            with open(config_file) as f:
-                config = yaml.safe_load(f.read())
+    with get_tg_client() as client, open(config_file) as conf, open(pid_file, 'w') as pidfile:
+        dialogs = client.get_dialogs()
+        logger.info('Read pyCRONos.yml')
+        config = yaml.safe_load(conf.read())
 
 
-            def send_message(id, message, **kwargs):
-                global dialogs
-                dialog = [d for d in dialogs if d.id == id][0]
+        def send_message(user, message):
+            logger.info(f'Add action for subscriber "{user}": send "{message}"')
 
-                def action():
-                    logger.info(f'Action for subscriber "{dialog.name}" with id {id}: send "{message}"')
-                    dialog.send_message(f'{message}')
+            def action():
+                logger.info(f'Action for subscriber "{user}": send "{message}"')
+                client.send_message(user, message)
 
-                return action
+            return action
 
 
-            scheduler = BlockingScheduler()
-            scheduler.add_executor('processpool')
-            for id, args in config['telegram']['subscribers'].items():
-                logger.info(f'Add job {id}: {args}')
-                action = send_message(id, **args)
-                scheduler.add_job(f'{__name__}:{action.__name__}', 'cron', **cron_to_apsched(args['cron']))
-            with open(pid_file, 'w') as pidfile:
-                pidfile.write(str(os.getpid()))
-                logger.info(f'pyCRONos.pid = {os.getpid()}')
-            scheduler.start()
+        scheduler = BlockingScheduler()
+        scheduler.add_executor('processpool')
+        subs = config['telegram']['subscribers']
+        for (user, params) in subs.items():
+            action = send_message(user, params.get('message'))
+            scheduler.add_job(f'{__name__}:{action.__name__}', 'cron', **cron_to_apsched(params.get('cron')))
+        pidfile.write(str(os.getpid()))
+        logger.info(f'pyCRONos.pid = {os.getpid()}')
+        scheduler.start()
