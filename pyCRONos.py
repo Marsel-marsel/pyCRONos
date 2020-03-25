@@ -1,7 +1,8 @@
 import os
-from telethon.sync import TelegramClient
+import asyncio
+from telethon import TelegramClient
 import logging
-from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import yaml
 import re
 from sqlite3 import OperationalError
@@ -10,7 +11,6 @@ HOME = os.path.dirname(__file__)
 api_hash_file = os.path.join(HOME, 'secrets', 'api_hash')
 api_id_file = os.path.join(HOME, 'secrets', 'api_id')
 config_file = os.path.join(HOME, 'pyCRONos.yml')
-pid_file = os.path.join(HOME, 'pyCRONos.pid')
 log_file = os.path.join(HOME, 'pyCRONos.log')
 
 logging.basicConfig(
@@ -28,12 +28,14 @@ def get_tg_client():
         api_id = int(idF.read().strip())
     try:
         if os.path.exists(os.path.join(HOME, 'pyCRONos.session')):
-            client = TelegramClient(session=os.path.join(HOME, 'pyCRONos.session'), api_id=api_id, api_hash=api_hash)
+            client = TelegramClient(session=os.path.join(HOME, 'pyCRONos.session'),
+                                    api_id=api_id, api_hash=api_hash,
+                                    auto_reconnect=True,
+                                    connection_retries=5)
         else:
             client = TelegramClient('pyCRONos', api_id=api_id, api_hash=api_hash, sequential_updates=True)
     except OperationalError:
-        with open(pid_file) as pid:
-            logger.error(f'Telegram Client is running, please execute: kill {pid.read()}')
+            logger.error(f'Telegram Client is already connected to telegram API')
             exit(1)
     return client
 
@@ -48,7 +50,7 @@ def cron_to_apsched(cron):
 
 
 if __name__ == '__main__':
-    with get_tg_client() as client, open(config_file) as conf, open(pid_file, 'w') as pidfile:
+    with get_tg_client() as client, open(config_file) as conf:
         logger.info('Read pyCRONos.yml')
         config = yaml.safe_load(conf.read())
 
@@ -56,19 +58,20 @@ if __name__ == '__main__':
         def send_message(user, message):
             logger.info(f'Add action for subscriber "{user}": send "{message}"')
 
-            def action():
+            async def action():
                 logger.info(f'Action for subscriber "{user}": send "{message}"')
-                client.send_message(user, message)
-
+                await client.send_message(user, message)
             return action
 
-
-        scheduler = BlockingScheduler()
-        scheduler.add_executor('processpool')
+        scheduler = AsyncIOScheduler()
         subs = config['telegram']['subscribers']
         for (user, params) in subs.items():
             action = send_message(user, params.get('message'))
-            scheduler.add_job(f'{__name__}:{action.__name__}', 'cron', **cron_to_apsched(params.get('cron')))
-        pidfile.write(str(os.getpid()))
+            scheduler.add_job(action, 'cron', **cron_to_apsched(params.get('cron')))
         logger.info(f'pyCRONos.pid = {os.getpid()}')
         scheduler.start()
+
+        try:
+            asyncio.get_event_loop().run_forever()
+        except Exception as e:
+            logger.error(str(e))
