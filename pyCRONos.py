@@ -57,6 +57,10 @@ if __name__ == '__main__':
 
         def send_message(user, message):
             logger.info(f'Add action for subscriber "{user}": send "{message}"')
+            try:
+                user = int(user)  # group id presented as integers
+            except ValueError:
+                pass
 
             async def action():
                 logger.info(f'Action for subscriber "{user}": send "{message}"')
@@ -66,10 +70,6 @@ if __name__ == '__main__':
         scheduler = AsyncIOScheduler()
         subs = config['telegram']['subscribers']
         for (user, params) in subs.items():
-            try:
-                user = int(user)  # group id presented as integers
-            except ValueError:
-                pass
             action = send_message(user, params.get('message'))
             scheduler.add_job(action, 'cron', **cron_to_apsched(params.get('cron')))
         logger.info(f'pyCRONos.pid = {os.getpid()}')
