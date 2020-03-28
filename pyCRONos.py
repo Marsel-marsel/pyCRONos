@@ -35,18 +35,15 @@ def get_tg_client():
         else:
             client = TelegramClient('pyCRONos', api_id=api_id, api_hash=api_hash, sequential_updates=True)
     except OperationalError:
-            logger.error(f'Telegram Client is already connected to telegram API')
-            exit(1)
+        logger.error(f'Telegram Client is already connected to telegram API')
+        exit(1)
     return client
 
 
 def cron_to_apsched(cron):
     cron = re.sub(' +', ' ', cron).split(' ')
-    dict = {}
-    for i, option in enumerate(['minute', 'hour', 'day', 'month', 'day_of_week']):
-        dict[option] = cron[i]
-    logger.info(f'{cron} converted to {dict}')
-    return dict
+    cron_syntax = ['minute', 'hour', 'day', 'month', 'day_of_week']
+    return {cron_arg: cron[i] for i, cron_arg in enumerate(cron_syntax)}
 
 
 if __name__ == '__main__':
@@ -65,7 +62,9 @@ if __name__ == '__main__':
             async def action():
                 logger.info(f'Action for subscriber "{user}": send "{message}"')
                 await client.send_message(user, message)
+
             return action
+
 
         scheduler = AsyncIOScheduler()
         subs = config['telegram']['subscribers']
@@ -74,7 +73,8 @@ if __name__ == '__main__':
             scheduler.add_job(action, 'cron', **cron_to_apsched(params.get('cron')))
         logger.info(f'pyCRONos.pid = {os.getpid()}')
         scheduler.start()
-        try:
-            asyncio.get_event_loop().run_forever()
-        except Exception as e:
-            logger.error(str(e))
+        while True:
+            try:
+                asyncio.get_event_loop().run_forever()
+            except Exception as e:
+                logger.error(str(e))
