@@ -2,6 +2,7 @@ import os
 import asyncio
 from telethon import TelegramClient
 import logging
+from logging import handlers
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import yaml
 import re
@@ -16,7 +17,7 @@ log_file = os.path.join(HOME, 'pyCRONos.log')
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    handlers=[logging.FileHandler(log_file),
+    handlers=[handlers.RotatingFileHandler(log_file, maxBytes=5000),
               logging.StreamHandler()]
 )
 logger = logging.getLogger('pyCRONos')

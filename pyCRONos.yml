@@ -1,6 +1,18 @@
 # !!! UTC TIME IS USED FOR CRON !!!
 telegram:
   subscribers:
-    '@user_name':  # @ symbol can be omitted
-      message: "don't forget ur pills"
-      cron: '29 0 * * *'  # At 00:29 UTC every day
+    '@marsel_shagiev':  # @ symbol can be omitted
+      message: "clean me up"
+      cron: "0 18 * * 1-4"
+
+    '@narisovanakartinaa':
+      message: "VALIK!"
+      cron: "0 19 * * *"
+
+    '@DNorvich':
+      message: "singular"
+      cron: "0 19 * * *"
+
+    '-355144737':
+      message: "read"
+      cron: "0 20 * * *"
