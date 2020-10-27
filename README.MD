@@ -1,6 +1,6 @@
 # pyCRONos
 Sends messages to telegram contacts. Period is set 
-using crontab syntax.
+using crontab syntax. This project is a kind of tribute to Mark Lutz's "Learning Python".
 
 ## Usage
 
